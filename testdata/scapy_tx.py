@@ -46,6 +46,7 @@ parser.add_argument('-mac', '--mac', nargs="*", help='mac [intf | da | bcast | b
 parser.add_argument('-smi', '--smi', action='store_true', help='SA incr')
 parser.add_argument('-v', '--vidpri', nargs="*", help='vlan [prio]')
 parser.add_argument('-ip', '--ip', nargs="*", help='ip [dstip] [srcip] [udp | tcp | arp] [<dstport [srcport]> | opcode]')
+parser.add_argument('-ip6', '--ip6', nargs="*", help='ip6 [dstip] [srcip] [udp | tcp | icmpv6] [<dstport [srcport]> | opcode]')
 parser.add_argument('-i', '--txintf', help='tx interface')
 parser.add_argument('-d', '--dump', action='store_true', help='dump packet and data=')
 parser.add_argument('-l', '--length', help='length')
@@ -63,6 +64,8 @@ prio = 0
 vid = 0
 dstip = ""
 srcip = "192.168.1.1"
+dstip6 = ""
+srcip6 = "2001::2"
 proto = "udp"
 opcode = 1
 dstport = 50013
@@ -114,6 +117,28 @@ if args.ip:
   if len(args.ip) > 4:
       srcport = int(args.ip[4])
 
+if args.ip6:
+    dstip6 = args.ip6[0]
+    print "ip6 dst=" + str(dstip6)
+    if len(args.ip6) > 1:
+       srcip6 = args.ip6[1]
+       print "ip6 src=" + str(srcip6)
+    if len(args.ip6) > 2:
+       proto = args.ip6[2]
+    if (len(args.ip6) > 3):
+        if proto == "icmp6":
+          icmp6_type = int(args.ip6[3])
+          ## TBDIP6: handle icmpv6 opcodes (ND, NS, Router Adv)
+          if icmp6_type == 128:
+             # req
+             DA_arp = DA_zero
+          #else: #if icmp6_type == 129:
+          else:
+             DA_arp = DA
+        else:
+            dstport = int(args.ip6[3])
+    if len(args.ip6) > 4:
+        srcport = int(args.ip6[4])
 
 if args.length:
   length = args.length
@@ -127,27 +152,46 @@ if not args.dump:
 if args.smi:
   smi = 1
 
+
 for dst_port in range(0,count):
-  if dstip:
-    if vid != 0:
-      if proto == "udp":
-        p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/IP(src=srcip,dst=dstip)/UDP(sport=srcport,dport=dstport)/payload)
-      elif proto == "tcp":
-        p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/IP(src=srcip,dst=dstip)/TCP(sport=srcport,dport=dstport)/payload)
-      elif proto == "arp":
-        p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/ARP(psrc=srcip,pdst=dstip,hwsrc=SA,hwdst=DA_arp,hwtype=1,ptype=2048,op=opcode)/payload)
-    else:
-      if proto == "udp":
-        p=(Ether(src=SA, dst=DA)/IP(src=srcip,dst=dstip)/UDP(sport=srcport,dport=dstport)/payload)
-      elif proto == "tcp":
-        p=(Ether(src=SA, dst=DA)/IP(src=srcip,dst=dstip)/TCP(sport=srcport,dport=dstport)/payload)
-      elif proto == "arp":
-        p=(Ether(src=SA, dst=DA)/ARP(psrc=srcip,pdst=dstip,hwsrc=SA,hwdst=DA_arp,hwtype=1,ptype=2048,op=opcode)/payload)
+  if args.ip:
+   if dstip:
+     if vid != 0:
+       if proto == "udp":
+         p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/IP(src=srcip,dst=dstip)/UDP(sport=srcport,dport=dstport)/payload)
+       elif proto == "tcp":
+         p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/IP(src=srcip,dst=dstip)/TCP(sport=srcport,dport=dstport)/payload)
+       elif proto == "arp":
+         p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/ARP(psrc=srcip,pdst=dstip,hwsrc=SA,hwdst=DA_arp,hwtype=1,ptype=2048,op=opcode)/payload)
+     else:
+       if proto == "udp":
+         p=(Ether(src=SA, dst=DA)/IP(src=srcip,dst=dstip)/UDP(sport=srcport,dport=dstport)/payload)
+       elif proto == "tcp":
+         p=(Ether(src=SA, dst=DA)/IP(src=srcip,dst=dstip)/TCP(sport=srcport,dport=dstport)/payload)
+       elif proto == "arp":
+         p=(Ether(src=SA, dst=DA)/ARP(psrc=srcip,pdst=dstip,hwsrc=SA,hwdst=DA_arp,hwtype=1,ptype=2048,op=opcode)/payload)
+  elif args.ip6:    
+     #print "should come here for ip6 3"  
+     if vid != 0:
+       if proto == "udp":
+         p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/IPv6(src=srcip6,dst=dstip6)/UDP(sport=srcport,dport=dstport)/payload)
+       elif proto == "tcp":
+         p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/IPv6(src=srcip6,dst=dstip6)/TCP(sport=srcport,dport=dstport)/payload)
+       elif proto == "icmp6":
+         #p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio)/ARP(psrc=srcip6,pdst=dstip6,hwsrc=SA,hwdst=DA_arp,hwtype=1,ptype=2048,op=opcode)/payload)
+         print "unsupported now"
+     else:
+       if proto == "udp":
+         p=(Ether(src=SA, dst=DA)/IPv6(src=srcip6,dst=dstip6)/UDP(sport=srcport,dport=dstport)/payload)
+       elif proto == "tcp":
+         p=(Ether(src=SA, dst=DA)/IP(src=srcip6,dst=dstip6)/TCP(sport=srcport,dport=dstport)/payload)
+       elif proto == "icmp6":
+           print "unsupported now"
   else:
-    if vid != 0:
-      p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio, type=60)/payload60)
-    else:
-      p=(Ether(src=SA, dst=DA, type=60)/payload60)
+      if vid != 0:
+       p=(Ether(src=SA, dst=DA)/Dot1Q(vlan=vid, prio=prio, type=60)/payload60)
+      else:
+       p=(Ether(src=SA, dst=DA, type=60)/payload60)
 
   if len(txintf) == 0:
     print p.show(dump=True)
