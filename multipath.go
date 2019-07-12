@@ -51,6 +51,42 @@ func mpTest(t *testing.T) {
 	}.Test(t)
 }
 
+func mpIp6Test(t *testing.T) {
+	test.SkipIfDryRun(t)
+	assert := test.Assert{t}
+	defer nsifDelNets(netport.FourIp6Nets).Test(t)
+	for i := range netport.FourIp6Nets {
+		nd := &netport.FourIp6Nets[i]
+		ns := nd.Netns
+		_, err := os.Stat(filepath.Join("/var/run/netns", ns))
+		if err != nil {
+			assert.Program("ip", "netns", "add", ns)
+		}
+		assert.Program("ip", "netns", "exec", ns, "sysctl", "-w", "net/ipv6/conf/all/rp_filter=0")
+		ifname := netport.PortByNetPort[nd.NetPort]
+		nd.Ifname = ifname
+		assert.Program("ip", "link", "set", ifname, "up",
+			"netns", ns)
+		assert.Program("ip", "netns", "exec", ns,
+			"ip", "-6", "address", "add", nd.Ifa,
+			"dev", ifname)
+		assert.Program("ip", "netns", "exec", ns, "sysctl", "-w", "net/ipv4/conf/"+ifname+"/rp_filter=0")
+		for _, dIf := range nd.DummyIfs {
+			assert.Program("ip", "netns", "exec", ns, "ip", "link", "add", dIf.Ifname, "type", "dummy")
+			assert.Program("ip", "netns", "exec", ns, "ip", "link", "set", dIf.Ifname, "up")
+			assert.Program("ip", "netns", "exec", ns, "ip", "-6", "addr", "add", dIf.Ifa, "dev", dIf.Ifname)
+		}
+	}
+	test.Tests{
+		staticRoute(netport.FourIp6Nets),
+		pingRemotesP(netport.FourIp6Nets),
+		removeLastRoute(netport.FourIp6Nets),
+		pingRemotesP(netport.FourIp6Nets),
+		pingGateways(netport.FourIp6Nets),
+		removeRoutePingGW(netport.FourIp6Nets),
+	}.Test(t)
+}
+
 type staticRoute []netport.NetDev
 
 func (staticRoute) String() string { return "staticRoute" }

@@ -19,6 +19,9 @@ var Flood = flag.Int("test.flood", 1, "flood ping duration in seconds")
 func pingNetTest(t *testing.T) {
 	pingTest(t, netport.TwoNets)
 }
+func pingIp6NetTest(t *testing.T) {
+	pingIp6Test(t, netport.TwoIp6Nets)
+}
 
 func pingVlanTest(t *testing.T) {
 	pingTest(t, netport.TwoVlanNets)
@@ -33,6 +36,14 @@ func pingBridgeTest(t *testing.T) {
 }
 
 func pingTest(t *testing.T, netdevs netport.NetDevs) {
+	netdevs.Test(t,
+		pingGateways(netdevs),
+		pingRemotes(netdevs),
+		pingFlood(netdevs),
+	)
+}
+
+func pingIp6Test(t *testing.T, netdevs netport.NetDevs) {
 	netdevs.Test(t,
 		pingGateways(netdevs),
 		pingRemotes(netdevs),
