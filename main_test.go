@@ -55,14 +55,27 @@ func TestMain(m *testing.M) {
 			"@redisd",
 			"@redis.reg",
 			"@redis.pub",
-			"@vnet",
-			"@vnetd",
 		} {
 			if bytes.Index(b, []byte(atsock)) < 0 {
-				panic(fmt.Errorf("no %s, is goes running?",
+                               panic(fmt.Errorf("no %s, is goes  running?",
 					atsock))
 			}
 		}
+               var vnetproc = [...]string{
+                       "@vnet",
+                       "@vnetd",
+                       "@vnet-platina-mk1",
+               }
+               vnetActive := 0
+               for _, atsock := range vnetproc {
+                       if bytes.Index(b, []byte(atsock)) >= 0 {
+                               vnetActive += 1
+                       }
+               }
+               if vnetActive < 2 {
+                       panic(fmt.Errorf("need two of %+v, is goes running?",
+                               vnetproc))
+               }
 	}
 	netport.Init(*Goes)
 	ethtool.Init()
