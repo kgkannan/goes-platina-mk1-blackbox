@@ -29,8 +29,12 @@ func TestMain(m *testing.M) {
 		if *XethStat {
 			showXethStats()
 		}
+		/* FIXME_1.3; is this legit build error with go.mod
+		 * pointing to local /test; Pause() is no longer method
+		 * but a type struct; should this be test.Pause.xxx?
+		 */
 		if ecode != 0 {
-			test.Pause()
+			test.Pause.Flag()
 			os.Exit(ecode)
 		}
 	}()
@@ -57,31 +61,32 @@ func TestMain(m *testing.M) {
 			"@redis.pub",
 		} {
 			if bytes.Index(b, []byte(atsock)) < 0 {
-                               panic(fmt.Errorf("no %s, is goes  running?",
+				panic(fmt.Errorf("no %s, is goes  running?",
 					atsock))
 			}
 		}
-               var vnetproc = [...]string{
-                       "@vnet",
-                       "@vnetd",
-                       "@vnet-platina-mk1",
-               }
-               vnetActive := 0
-               for _, atsock := range vnetproc {
-                       if bytes.Index(b, []byte(atsock)) >= 0 {
-                               vnetActive += 1
-                       }
-               }
-               if vnetActive < 2 {
-                       panic(fmt.Errorf("need two of %+v, is goes running?",
-                               vnetproc))
-               }
+		var vnetproc = [...]string{
+			"@vnet",
+			"@vnetd",
+			"@vnet-platina-mk1",
+		}
+		vnetActive := 0
+		for _, atsock := range vnetproc {
+			if bytes.Index(b, []byte(atsock)) >= 0 {
+				vnetActive += 1
+			}
+		}
+		if vnetActive < 2 {
+			panic(fmt.Errorf("need two of %+v, is goes running?",
+				vnetproc))
+		}
 	}
 	netport.Init(*Goes)
 	ethtool.Init()
 	if testing.Verbose() {
 		uutInfo()
 	}
+	netport.IsHighVer = IsHigherVer()
 	ecode = m.Run()
 }
 
@@ -121,6 +126,35 @@ func mayRun(t *testing.T, name string, f func(*testing.T)) bool {
 		ret = t.Run(name, f)
 	}
 	return ret
+}
+
+//set environment info based on platform software
+func IsHigherVer() (higher bool) {
+	pd := *PlatformDriver
+	o, err := exec.Command("/sbin/modinfo", pd).Output()
+	if err == nil && len(o) > 0 {
+		const depends = "depends:"
+		s := string(o)
+		i := strings.Index(s, depends)
+		if i > 0 {
+			s = s[i+len(depends):]
+			dependencies := 0
+			drvdepends := [...]string{
+				"onie",
+				"xeth",
+			}
+			for _, d := range drvdepends {
+				if strings.Index(s, d) >= 0 {
+					dependencies += 1
+				}
+			}
+			if dependencies == 2 {
+				higher = true
+			}
+		}
+	}
+	fmt.Printf("\n IsHigherVer %v \n", higher)
+	return
 }
 
 func uutInfo() {
