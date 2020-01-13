@@ -116,6 +116,12 @@ func Test(t *testing.T) {
 	})
 	mayRun(t, "nsif", nsifTest)
 	mayRun(t, "multipath", mpTest)
+	//TODOIP6: temp placeholder for ip6 tests
+	mayRun(t, "net6", func(t *testing.T) {
+		mayRun(t, "ping", pingIp6NetTest)
+	})
+	mayRun(t, "nsifIp6", nsifIp6Test)
+	mayRun(t, "multipathIp6", mpIp6Test)
 	test.SkipIfDryRun(t)
 }
 

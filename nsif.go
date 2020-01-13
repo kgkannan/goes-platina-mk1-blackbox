@@ -45,6 +45,33 @@ func nsifTest(t *testing.T) {
 	}.Test(t)
 }
 
+func nsifIp6Test(t *testing.T) {
+	test.SkipIfDryRun(t)
+	assert := test.Assert{t}
+	defer nsifDelNets(netport.OneIp6Net).Test(t)
+	for i := range netport.OneIp6Net {
+		nd := &netport.OneIp6Net[i]
+		ns := nd.Netns
+		_, err := os.Stat(filepath.Join("/var/run/netns", ns))
+		if err != nil {
+			assert.Program("ip", "netns", "add", ns)
+		}
+		ifname := netport.PortByNetPort[nd.NetPort]
+		nd.Ifname = ifname
+		assert.Program("ip", "link", "set", ifname, "up",
+			"netns", ns)
+		assert.Program("ip", "netns", "exec", ns,
+			"ip", "-6", "address", "add", nd.Ifa,
+			"dev", ifname)
+	}
+	test.Tests{
+		nsifPing(netport.OneIp6Net),
+		nsifNeighbor(netport.OneIp6Net),
+		nsifDelNets(netport.OneIp6Net),
+		nsifNoNeighbor(netport.OneIp6Net),
+	}.Test(t)
+}
+
 type nsifPing []netport.NetDev
 
 func (nsifPing) String() string { return "ping" }
