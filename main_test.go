@@ -86,7 +86,7 @@ func TestMain(m *testing.M) {
 	if testing.Verbose() {
 		uutInfo()
 	}
-	netport.IsHighVer = IsHigherVer()
+	test.IsHighVer = IsHigherVer()
 	ecode = m.Run()
 }
 
