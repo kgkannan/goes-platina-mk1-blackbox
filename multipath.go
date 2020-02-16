@@ -94,6 +94,9 @@ func (mp pingRemotesP) Test(t *testing.T) {
 			time.Sleep(wait_time)
 		}
 	}
+	if failed {
+		test.Pause.Prompt("Failed")
+	}
 	assert.False(failed)
 }
 
@@ -166,6 +169,9 @@ func (mp removeRoutePingGW) Test(t *testing.T) {
 			failed = false
 			time.Sleep(wait_time)
 		}
+	}
+	if failed {
+		test.Pause.Prompt("Failed")
 	}
 	assert.False(failed)
 }

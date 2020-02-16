@@ -232,7 +232,7 @@ func (frr frrBgpInterConnectivity) Test(t *testing.T) {
 	} {
 		err := frr.PingCmd(t, x.hostname, x.target)
 		assert.Nil(err)
-		assert.Program(*Goes, "vnet", "show", "ip", "fib")
+		assert.Program(*Goes, "fe1", "switch", "fib")
 	}
 }
 
@@ -263,7 +263,7 @@ func (frr frrBgpFlap) Test(t *testing.T) {
 				"ip", "link", "set", "up", intf)
 			assert.Nil(err)
 			time.Sleep(1 * time.Second)
-			assert.Program(*Goes, "vnet", "show", "ip", "fib")
+			assert.Program(*Goes, "fe1", "switch", "fib")
 		}
 	}
 }
@@ -455,7 +455,7 @@ func (frr frrOspfInterConnectivity) Test(t *testing.T) {
 		{"R4", "192.168.222.10"},
 	} {
 		assert.Nil(frr.PingCmd(t, x.hostname, x.target))
-		assert.Program(*Goes, "vnet", "show", "ip", "fib")
+		assert.Program(*Goes, "fe1", "switch", "fib")
 	}
 }
 
@@ -486,7 +486,7 @@ func (frr frrOspfFlap) Test(t *testing.T) {
 				"ip", "link", "set", "up", intf)
 			assert.Nil(err)
 			time.Sleep(1 * time.Second)
-			assert.Program(*Goes, "vnet", "show", "ip", "fib")
+			assert.Program(*Goes, "fe1", "switch", "fib")
 		}
 	}
 }
@@ -682,7 +682,7 @@ func (frr frrIsisInterConnectivity) Test(t *testing.T) {
 		{"R4", "192.168.222.10"},
 	} {
 		assert.Nil(frr.PingCmd(t, x.hostname, x.target))
-		assert.Program(*Goes, "vnet", "show", "ip", "fib")
+		assert.Program(*Goes, "fe1", "switch", "fib")
 	}
 }
 
@@ -713,7 +713,7 @@ func (frr frrIsisFlap) Test(t *testing.T) {
 				"ip", "link", "set", "up", intf)
 			assert.Nil(err)
 			time.Sleep(1 * time.Second)
-			assert.Program(*Goes, "vnet", "show", "ip", "fib")
+			assert.Program(*Goes, "fe1", "switch", "fib")
 		}
 	}
 }

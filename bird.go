@@ -211,7 +211,7 @@ func (bird birdBgpInterConnectivity) Test(t *testing.T) {
 		{"R4", "192.168.222.10"},
 	} {
 		assert.Nil(bird.PingCmd(t, x.hostname, x.target))
-		assert.Program(*Goes, "vnet", "show", "ip", "fib")
+		assert.Program(*Goes, "fe1", "switch", "fib")
 	}
 }
 
@@ -238,7 +238,7 @@ func (bird birdBgpFlap) Test(t *testing.T) {
 				"ip", "link", "set", "up", intf)
 			assert.Nil(err)
 			time.Sleep(1 * time.Second)
-			assert.Program(*Goes, "vnet", "show", "ip", "fib")
+			assert.Program(*Goes, "fe1", "switch", "fib")
 		}
 	}
 }
@@ -415,7 +415,7 @@ func (bird birdOspfInterConnectivity) Test(t *testing.T) {
 		{"R4", "192.168.222.10"},
 	} {
 		assert.Nil(bird.PingCmd(t, x.hostname, x.target))
-		assert.Program(*Goes, "vnet", "show", "ip", "fib")
+		assert.Program(*Goes, "fe1", "switch", "fib")
 	}
 }
 
@@ -442,7 +442,7 @@ func (bird birdOspfFlap) Test(t *testing.T) {
 				"ip", "link", "set", "up", intf)
 			assert.Nil(err)
 			time.Sleep(1 * time.Second)
-			assert.Program(*Goes, "vnet", "show", "ip", "fib")
+			assert.Program(*Goes, "fe1", "switch", "fib")
 		}
 	}
 }

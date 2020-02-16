@@ -66,7 +66,8 @@ func (nsif nsifNeighbor) Test(t *testing.T) {
 	assert := test.Assert{t}
 	retries := 3
 	var not_found bool
-	xargs := []string{*Goes, "vnet", "show", "neigh"}
+	//FIXME, this is just the xeth, not necessary what got added to TH
+	xargs := []string{*Goes, "fe1", "xeth", "neigh"}
 	time.Sleep(1 * time.Second)
 	for i := retries; i > 0; i-- {
 		not_found = false
@@ -77,6 +78,7 @@ func (nsif nsifNeighbor) Test(t *testing.T) {
 		sout := strings.TrimSpace(string(out))
 		for _, nd := range []netport.NetDev(nsif) {
 			for _, r := range nd.Remotes {
+				t.Log("matching", r, "with", sout)
 				re := regexp.MustCompile(r)
 				match := re.FindAllStringSubmatch(sout, -1)
 				if len(match) == 0 {
@@ -86,12 +88,11 @@ func (nsif nsifNeighbor) Test(t *testing.T) {
 		}
 		if not_found && *test.VV {
 			t.Log(i-1, "retries left\n", sout)
-		} else {
-			return
 		}
 		time.Sleep(1 * time.Second)
 	}
 	if not_found {
+		test.Pause.Prompt("Failed")
 		assert.Nil(fmt.Errorf("no neighbor found"))
 	}
 }
@@ -119,7 +120,8 @@ func (nsifNoNeighbor) String() string { return "no-neighbor" }
 
 func (nsif nsifNoNeighbor) Test(t *testing.T) {
 	assert := test.Assert{t}
-	xargs := []string{*Goes, "vnet", "show", "neigh"}
+	//FIXME, this is just the xeth, not necessary what got added to TH
+	xargs := []string{*Goes, "fe1", "xeth", "neigh"}
 	if *test.VVV {
 		t.Log(xargs)
 	}

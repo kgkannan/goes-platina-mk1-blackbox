@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 			showXethStats()
 		}
 		if ecode != 0 {
-			test.Pause()
+			test.Pause.Prompt()
 			os.Exit(ecode)
 		}
 	}()
@@ -55,8 +55,7 @@ func TestMain(m *testing.M) {
 			"@redisd",
 			"@redis.reg",
 			"@redis.pub",
-			"@vnet",
-			"@vnetd",
+			"@fe1",
 		} {
 			if bytes.Index(b, []byte(atsock)) < 0 {
 				panic(fmt.Errorf("no %s, is goes running?",
@@ -116,14 +115,6 @@ func uutInfo() {
 	o, err := exec.Command(*Goes, "show", "buildid").Output()
 	if err == nil && len(o) > 0 {
 		fmt.Print(*Goes, ": |\n    buildid/", string(o))
-	}
-	o, err = exec.Command(*Goes, "vnetd", "-path").Output()
-	if err == nil && len(o) > 0 {
-		vnet := string(o[:len(o)-1])
-		o, err = exec.Command(*Goes, "show", "buildid", vnet).Output()
-		if err == nil && len(o) > 0 {
-			fmt.Print(vnet, ": |\n    buildid/", string(o))
-		}
 	}
 	pd := *PlatformDriver
 	ko := pd
