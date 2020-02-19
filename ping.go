@@ -20,6 +20,10 @@ func pingNetTest(t *testing.T) {
 	pingTest(t, netport.TwoNets)
 }
 
+func pingIp6NetTest(t *testing.T) {
+	pingTest(t, netport.TwoNetsIp6)
+}
+
 func pingVlanTest(t *testing.T) {
 	pingTest(t, netport.TwoVlanNets)
 }
