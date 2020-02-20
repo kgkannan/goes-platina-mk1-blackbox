@@ -18,12 +18,20 @@ import (
 	"github.com/platinasystems/test/netport"
 )
 
-func nsifTest(t *testing.T) {
+func nsifNetTest(t *testing.T) {
+	nsifTest(t, netport.OneNet)
+}
+
+func nsifIp6NetTest(t *testing.T) {
+	nsifTest(t, netport.OneNetIp6)
+}
+
+func nsifTest(t *testing.T, netdevs netport.NetDevs) {
 	test.SkipIfDryRun(t)
 	assert := test.Assert{t}
-	defer nsifDelNets(netport.OneNet).Test(t)
-	for i := range netport.OneNet {
-		nd := &netport.OneNet[i]
+	defer nsifDelNets(netdevs).Test(t)
+	for i := range netdevs {
+		nd := &netdevs[i]
 		ns := nd.Netns
 		_, err := os.Stat(filepath.Join("/var/run/netns", ns))
 		if err != nil {
@@ -31,17 +39,18 @@ func nsifTest(t *testing.T) {
 		}
 		ifname := netport.PortByNetPort[nd.NetPort]
 		nd.Ifname = ifname
+		family := test.IpFamily(nd.Ifa)
 		assert.Program("ip", "link", "set", ifname, "up",
 			"netns", ns)
 		assert.Program("ip", "netns", "exec", ns,
-			"ip", "address", "add", nd.Ifa,
+			"ip", family, "address", "add", nd.Ifa,
 			"dev", ifname)
 	}
 	test.Tests{
-		nsifPing(netport.OneNet),
-		nsifNeighbor(netport.OneNet),
-		nsifDelNets(netport.OneNet),
-		nsifNoNeighbor(netport.OneNet),
+		nsifPing(netdevs),
+		nsifNeighbor(netdevs),
+		nsifDelNets(netdevs),
+		nsifNoNeighbor(netdevs),
 	}.Test(t)
 }
 
