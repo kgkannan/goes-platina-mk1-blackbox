@@ -15,12 +15,20 @@ import (
 	"github.com/platinasystems/test/netport"
 )
 
-func mpTest(t *testing.T) {
+func mpNetTest(t *testing.T) {
+	mpTest(t, netport.FourNets)
+}
+
+func mpNetIp6Test(t *testing.T) {
+	mpTest(t, netport.FourNetsIp6)
+}
+
+func mpTest(t *testing.T, netdevs netport.NetDevs) {
 	test.SkipIfDryRun(t)
 	assert := test.Assert{t}
-	defer nsifDelNets(netport.FourNets).Test(t)
-	for i := range netport.FourNets {
-		nd := &netport.FourNets[i]
+	defer nsifDelNets(netdevs).Test(t)
+	for i := range netdevs {
+		nd := &netdevs[i]
 		ns := nd.Netns
 		_, err := os.Stat(filepath.Join("/var/run/netns", ns))
 		if err != nil {
@@ -42,12 +50,12 @@ func mpTest(t *testing.T) {
 		}
 	}
 	test.Tests{
-		staticRoute(netport.FourNets),
-		pingRemotesP(netport.FourNets),
-		removeLastRoute(netport.FourNets),
-		pingRemotesP(netport.FourNets),
-		pingGateways(netport.FourNets),
-		removeRoutePingGW(netport.FourNets),
+		staticRoute(netdevs),
+		pingRemotesP(netdevs),
+		removeLastRoute(netdevs),
+		pingRemotesP(netdevs),
+		pingGateways(netdevs),
+		removeRoutePingGW(netdevs),
 	}.Test(t)
 }
 
@@ -82,6 +90,7 @@ func (mp pingRemotesP) Test(t *testing.T) {
 					failed = true
 					if n == max_retries-1 {
 						fmt.Println(nd.Netns, "ping", r, "failed")
+						test.Pause.Prompt("ping failed")
 					}
 				}
 			}
@@ -114,6 +123,11 @@ func (mp removeLastRoute) Test(t *testing.T) {
 			continue
 		}
 		for _, r := range nd.Routes {
+			is_ip6 := test.IsIPv6(r.Prefix)
+			if is_ip6 {
+				dummy_ifa_h1 = "fc:5:5:5:5:5:5:5"
+				dummy_ifa_h2 = "fc:6:6:6:6:6:6:6"
+			}
 			if r.Prefix == dummy_ifa_h1 || r.Prefix == dummy_ifa_h2 {
 				assert.Program("ip", "netns", "exec", nd.Netns,
 					"ip", "route", "del", r.Prefix, "via",
