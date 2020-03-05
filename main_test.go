@@ -101,6 +101,7 @@ func Test(t *testing.T) {
 	})
 	mayRun(t, "net6", func(t *testing.T) {
 		mayRun(t, "ping", pingIp6NetTest)
+		mayRun(t, "frr", frrIp6NetTest)
 	})
 	mayRun(t, "multipath", func(t *testing.T) {
 		mayRun(t, "ip4", mpNetTest)

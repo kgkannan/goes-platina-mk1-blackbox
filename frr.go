@@ -19,6 +19,11 @@ func frrNetTest(t *testing.T) {
 	test.SkipIfDryRun(t)
 }
 
+func frrIp6NetTest(t *testing.T) {
+	t.Run("ospf", frrIp6NetOspfTest)
+	test.SkipIfDryRun(t)
+}
+
 func frrVlanTest(t *testing.T) {
 	t.Run("bgp", frrVlanBgpTest)
 	t.Run("ospf", frrVlanOspfTest)
@@ -47,8 +52,24 @@ func frrBgpTest(t *testing.T, tmpl string) {
 		frrBgpAdminDown{docket})
 }
 
+//FIXME: hack to check ipv6 address for ipv6/ipv4 ospf
+func frrIsIPv6(frr *docker.Docket) bool {
+	for _, r := range frr.Routers {
+		for _, i := range r.Intfs {
+			if test.IsIPv6(i.Address) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func frrNetOspfTest(t *testing.T) {
 	frrOspfTest(t, "testdata/frr/ospf/conf.yaml.tmpl")
+}
+
+func frrIp6NetOspfTest(t *testing.T) {
+	frrOspfIp6Test(t, "testdata/frr/ospf/confip6.yaml.tmpl")
 }
 
 func frrVlanOspfTest(t *testing.T) {
@@ -66,6 +87,22 @@ func frrOspfTest(t *testing.T, tmpl string) {
 		frrOspfInterConnectivity{docket},
 		frrOspfFlap{docket},
 		frrOspfConnectivity{docket},
+		frrOspfAdminDown{docket})
+}
+
+//TBDGK: define appropriate receivers like frrospfcarrier, etc. for
+//frrOspfIp6Neighbor
+func frrOspfIp6Test(t *testing.T, tmpl string) {
+	docket := &docker.Docket{Tmpl: tmpl}
+	docket.Test(t,
+		frrOspfCarrier{docket},
+		frrOspfIp6Connectivity{docket},
+		frrOspfDaemons{docket},
+		frrOspfIp6Neighbors{docket},
+		frrOspfIp6Routes{docket},
+		frrOspfIp6InterConnectivity{docket},
+		frrOspfFlap{docket},
+		frrOspfIp6Connectivity{docket},
 		frrOspfAdminDown{docket})
 }
 
@@ -339,6 +376,31 @@ func (frr frrOspfConnectivity) Test(t *testing.T) {
 	}
 }
 
+type frrOspfIp6Connectivity struct{ *docker.Docket }
+
+func (frrOspfIp6Connectivity) String() string { return "connectivity" }
+
+func (frr frrOspfIp6Connectivity) Test(t *testing.T) {
+	assert := test.Assert{t}
+
+	for _, x := range []struct {
+		host   string
+		target string
+	}{
+		//FIXME: hack to add ipv6 addresses
+		{"R1", "fc01:1:2:3:4:5:6:2"},
+		{"R1", "fc02:1:2:3:4:5:6:2"},
+		{"R2", "fc03:1:2:3:4:5:6:2"},
+		{"R2", "fc01:1:2:3:4:5:6:1"},
+		{"R3", "fc03:1:2:3:4:5:6:1"},
+		{"R3", "fc04:1:2:3:4:5:6:2"},
+		{"R4", "fc04:1:2:3:4:5:6:1"},
+		{"R4", "fc02:1:2:3:4:5:6:1"},
+	} {
+		assert.Nil(frr.PingCmd(t, x.host, x.target))
+	}
+}
+
 type frrOspfDaemons struct{ *docker.Docket }
 
 func (frrOspfDaemons) String() string { return "daemons" }
@@ -395,6 +457,47 @@ func (frr frrOspfNeighbors) Test(t *testing.T) {
 	}
 }
 
+type frrOspfIp6Neighbors struct{ *docker.Docket }
+
+func (frrOspfIp6Neighbors) String() string { return "neighbors" }
+
+func (frr frrOspfIp6Neighbors) Test(t *testing.T) {
+	assert := test.Assert{t}
+
+	timeout := 120
+
+	for _, x := range []struct {
+		hostname string
+		peer     string
+	}{
+		//FIXME: hack to add ipv6 addresses
+		{"R1", "fc01:1:2:3:4:5:6:2"},
+		{"R1", "fc02:1:2:3:4:5:6:2"},
+		{"R2", "fc03:1:2:3:4:5:6:2"},
+		{"R2", "fc01:1:2:3:4:5:6:1"},
+		{"R3", "fc03:1:2:3:4:5:6:1"},
+		{"R3", "fc04:1:2:3:4:5:6:2"},
+		{"R4", "fc04:1:2:3:4:5:6:1"},
+		{"R4", "fc02:1:2:3:4:5:6:1"},
+	} {
+		found := false
+		for i := timeout; i > 0; i-- {
+			out, err := frr.ExecCmd(t, x.hostname,
+				"vtysh", "-c", "show ipv6 ospf6 neighbor")
+			assert.Nil(err)
+			if !assert.MatchNonFatal(out, x.peer) {
+				time.Sleep(1 * time.Second)
+			} else {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("No ospf neighbor found for %v", x.hostname)
+		}
+	}
+}
+
 type frrOspfRoutes struct{ *docker.Docket }
 
 func (frrOspfRoutes) String() string { return "routes" }
@@ -434,6 +537,45 @@ func (frr frrOspfRoutes) Test(t *testing.T) {
 	}
 }
 
+type frrOspfIp6Routes struct{ *docker.Docket }
+
+func (frrOspfIp6Routes) String() string { return "routes" }
+
+func (frr frrOspfIp6Routes) Test(t *testing.T) {
+	assert := test.Assert{t}
+
+	for _, x := range []struct {
+		hostname string
+		route    string
+	}{
+		{"R1", "fc01:1:2:3:4:5:6:2/64"},
+		{"R1", "fc02:1:2:3:4:5:6:2/64"},
+		{"R2", "fc03:1:2:3:4:5:6:2/64"},
+		{"R2", "fc01:1:2:3:4:5:6:1/64"},
+		{"R3", "fc03:1:2:3:4:5:6:1/64"},
+		{"R3", "fc04:1:2:3:4:5:6:2/64"},
+		{"R4", "fc04:1:2:3:4:5:6:1/64"},
+		{"R4", "fc02:1:2:3:4:5:6:1/64"},
+	} {
+		found := false
+		timeout := 60
+		for i := timeout; i > 0; i-- {
+			out, err := frr.ExecCmd(t, x.hostname,
+				"ipv6", "route", "show", x.route)
+			assert.Nil(err)
+			if !assert.MatchNonFatal(out, x.route) {
+				time.Sleep(1 * time.Second)
+			} else {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("No ospf route for %v: %v", x.hostname, x.route)
+		}
+	}
+}
+
 type frrOspfInterConnectivity struct{ *docker.Docket }
 
 func (frrOspfInterConnectivity) String() string { return "inter-connectivity" }
@@ -456,6 +598,31 @@ func (frr frrOspfInterConnectivity) Test(t *testing.T) {
 	} {
 		assert.Nil(frr.PingCmd(t, x.hostname, x.target))
 		assert.Program(*Goes, "fe1", "switch", "fib")
+	}
+}
+
+type frrOspfIp6InterConnectivity struct{ *docker.Docket }
+
+func (frrOspfIp6InterConnectivity) String() string { return "inter-connectivity" }
+
+func (frr frrOspfIp6InterConnectivity) Test(t *testing.T) {
+	assert := test.Assert{t}
+
+	for _, x := range []struct {
+		hostname string
+		target   string
+	}{
+		{"R1", "fc03:1:2:3:4:5:6:2"},
+		{"R1", "fc04:1:2:3:4:5:6:1"},
+		{"R2", "fc04:1:2:3:4:5:6:2"},
+		{"R2", "fc02:1:2:3:4:5:6:2"},
+		{"R3", "fc01:1:2:3:4:5:6:1"},
+		{"R3", "fc02:1:2:3:4:5:6:1"},
+		{"R4", "fc01:1:2:3:4:5:6:2"},
+		{"R4", "fc03:1:2:3:4:5:6:1"},
+	} {
+		assert.Nil(frr.PingCmd(t, x.hostname, x.target))
+		assert.Program(*Goes, "fe1", "switch", "fib", "ip6")
 	}
 }
 
